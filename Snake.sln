@@ -1,31 +1,175 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33829.357
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Snake", "Snake.vcxproj", "{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Debug|x64.ActiveCfg = Debug|x64
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Debug|x64.Build.0 = Debug|x64
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Debug|x86.ActiveCfg = Debug|Win32
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Debug|x86.Build.0 = Debug|Win32
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Release|x64.ActiveCfg = Release|x64
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Release|x64.Build.0 = Release|x64
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Release|x86.ActiveCfg = Release|Win32
-		{0F65FC34-EA3C-4870-9C7A-2FA529311A5B}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {0F5AF7AA-5FBB-4576-9309-2A57D06E4331}
-	EndGlobalSection
-EndGlobal
+#include <iostream>
+#include <conio.h>//Бібліотека для роботи «консольним введенням і виведенням» програми
+#include <windows.h> //для Win32 систем
+using namespace std;
+
+bool gameOver;
+const int width = 20; // Ширина поля 
+const int height = 20; //Висота поля 
+int x, y, fruitX, fruitY, score; // x, y - координати змійки 
+                                 // fruitX, fruitY - координати для фруктів
+                                 // score - загальний рахунок гри 
+int tailX[100], tailY[100];//Масіви на 100 елементів по x і y 
+int ntail;//Кількість елементів у хвості
+enum eDirection { STOP = 0, LEFT, RIGHT, UP, DOWN }; //пересування вліво, вправо, верх, вниз будемо зберігати в переліках
+eDirection dir;
+
+void Setup() //При старті гри буде виставляти нужні нам параметри 
+{
+    gameOver = false; //Гра програна - невірно
+    dir = STOP; //Присвоємо дію , щоб змійка з самого початку гри стояла на місці
+    x = width / 2 - 1; //Вирівнюємо змійку по центру ділячи ширину на 2
+    y = height / 2 - 1; //Вирівнюємо змійку по центру ділячи висоту на 2
+    fruitX = rand() % width; //Кажемо що фрукт з'явться у випадковому місці по x
+    fruitY = rand() % height; //Кажемо що фрукт з'явться у випадковому місці по y
+    score = 0; // Загалний рахунок буде дорівнувати 0 при старті 
+
+}
+
+void Draw() //Малює нам карту для гри 
+{
+    Sleep(700);
+    system("cls"); //Очищає термінал коли викликатимемо функцію Draw
+
+    for (int i = 0; i < width + 1; i++)//Створюємо верхній кордон поля
+    {
+        cout << "#";//Виводимо кордон поля як #    
+    }
+    cout << endl;
+
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            if (j == 0 || j == width - 1)
+                cout << "#";
+            if (i == y && j == x)//Якщо i дорівнює y, j дорівнює x
+                cout << "0";//Тоді виводимо 0 , це символ для змійки 
+            else if (i == fruitY && j == fruitX)//Якщо i дорівнює fruitY, j дорівнює fruitX
+                cout << "F";//Тоді виводимо F , символ для фрукту 
+            else
+            {
+                bool print = false;
+                for (int k = 0; k < ntail; k++)
+                {
+                    if (tailX[k] == j && tailY[k] == i)
+                    {
+                        print = true;
+                        cout << "o";
+                    }
+                }
+                if (!print)
+                    cout << " ";
+            }
+
+        }
+        cout << endl;
+    }
+
+    for (int i = 0; i < width + 1; i++)//Створюємо нижній кордон поля
+    {
+        cout << "#";//Виводимо кордон поля як #    
+    }
+    cout << endl;
+    cout << "Score: " << score << endl;//Виводимо Score: в термінал
+}
+
+void Input() //Відслідковує натискання на кномки від користувача 
+{
+    if (_kbhit())//Вертає істину тобто True , якщо користувач натисканув на кнопку
+    {
+        switch (_getch())//задопомогою _getch відслідковую яку кнопку натискає користувач 
+        {
+        case 'a'://Кажемо якщо користувач натискає a
+            dir = LEFT;//То змійка йде вліво 
+            break;
+        case 'd'://Кажемо якщо користувач натискає d
+            dir = RIGHT;//То змійка йде вправо
+            break;
+        case 'w'://Кажемо якщо користувач натискає w
+            dir = UP;//То змійка йде вверх
+            break;
+        case 's'://Кажемо якщо користувач натискає s
+            dir = DOWN;//То змійка йде вниз
+            break;
+        case 'x'://Кажемо якщо користувач натискає кнопку х
+            gameOver = true;//То гра закінчується
+        }
+    }
+}
+
+void Logic() //Використовується вся логіка 
+{
+    int prevX = tailX[0];//Попередня позиція щодо x дорівнює tailX
+    int prevY = tailY[0];//Попередня позиція щодо y дорівнює tailY
+    int prev2X, prev2Y;//
+    tailX[0] = x;
+    tailY[0] = y;
+    for (int i = 1; i < ntail; i++)
+    {
+        prev2X = tailX[i];
+        prev2Y = tailY[i];
+        tailX[i] = prevX;
+        tailY[i] = prevY;
+        prevX = prev2X;
+        prevY = prev2Y;
+
+    }
+    switch (dir)//Перевіряємо куди наш dir двигається 
+    {
+    case LEFT:
+        x--;
+        break;
+    case RIGHT:
+        x++;
+        break;
+    case UP:
+        y--;
+        break;
+    case DOWN:
+        y++;
+        break;
+    }
+
+    /*if (x > width || x < 0 || y > height || y < 0)//Якщо один з цих пунктів буде виконаний то ми виходимо за наш кордон
+   {
+       gameOver = true;//Закінчуєм гру
+   }*/ 
+
+
+    if (x >= width - 1)//Создаємо можливість змійки входити в кордон з однієї сторони та виходити з іншого боку
+        x = 0;
+    else if (x < 0)
+        x = width - 2;
+
+    if (y >= height - 1)
+        x = 0;
+    else if (x < 0)
+        x = height - 2;
+
+    for (int i = 0; i < ntail; i++)
+    {
+        if (tailX[i] == x && tailY[i] == y)//Ми кажемо якщо наша головна змійка тобто 0 попадає на хвіст - о
+            gameOver = true;//Тоді гра закінчується
+    }
+
+    if (x == fruitX && y == fruitY)//Якщо x дорівнює fruitX і y дорівнює fruitY
+    {
+        score += 10;//тоді ми до змінної score добавляємо 10 поінтів 
+        fruitX = rand() % width; //Кажемо що фрукт з'явться у випадковому місці по x
+        fruitY = rand() % height; //Кажемо що фрукт з'явться у випадковому місці по y
+        ntail++;//наш хвіст буде ставати н одиницю більшою
+    }
+}
+
+int main()
+{
+    Setup();
+    while (!gameOver) //Поки gameOver = false , гра продовжується 
+    {
+        Draw(); //Включаємо функцію , ми малюємо заново карту
+        Input(); //Включаємо функцію , ми відслідковємо що натискає гравець 
+        Logic(); //Включаємо функцію , ми додаємо логіку в гру
+    }
+    return 0;
+}
